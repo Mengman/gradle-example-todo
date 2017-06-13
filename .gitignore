@@ -23,6 +23,8 @@ hs_err_pid*
 
 .gradle/
 .settings/
-.classpath
 build/*
 bin/
+
+.classpath
+.project
