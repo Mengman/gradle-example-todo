@@ -1,1 +1,112 @@
 apply plugin: 'java'
+// 以下配置必须放在 java 插件之后
+
+// 指定项目依赖仓库
+repositories {
+    // mavenLocal() // 本地配置的maven仓库
+    mavenCentral() // maven中央仓库
+}
+
+// 设置项目依赖
+dependencies {
+    compile group: 'org.apache.commons', name: 'commons-lang3', version: '3.1'
+}
+
+version = 0.1
+sourceCompatibility = 1.8
+
+jar {
+    manifest {
+        attributes 'Main-Class': 'com.manning.gia.todo.ToDoApp'
+    }
+}
+
+// sourceSets {
+//     main {
+//         java {
+//             srcDirs = ['src']
+//         }
+//     }
+//     test {
+//         java {
+//             srcDirs = ['test']
+//         }
+//     }
+// }
+
+buildDir = 'out'
+
+task wrapper(type: Wrapper) {
+    gradleVersion = '1.7'
+    group = 'wrapper'
+    description = 'create a gradle wrapper'
+}
+
+task first << { println "first" }
+task second << { println "second" }
+
+task printVersion(dependsOn: [second, first]) << {
+    logger.quiet "Version: $version"
+}
+
+ task third << {
+     println "third"
+ }
+
+ third.dependsOn("printVersion")
+
+class ProjectVersion {
+    Integer major
+    Integer minor
+    Boolean release
+
+    ProjectVersion(Integer major, Integer minor) {
+        this.major = major
+        this.minor = minor
+        this.release = Boolean.FALSE
+    }
+
+    ProjectVersion(Integer major, Integer minor, Boolean release) {
+        this(major, minor)
+        this.release = release
+    }
+
+    @Override
+    String toString() {
+        "$major.$minor${release ? '' : '-SNAPSHOT'}"
+    }
+}
+
+ ext.versionFile = file('version.properties')
+
+ task loadVersion {
+     project.version = readVersion()
+ }
+
+ ProjectVersion readVersion() {
+     logger.quiet 'Reading ther version file.'
+
+     if(!versionFile.exists()) {
+         throw new GradleException("Required version file does not exist: $versionFile.canonicalPath")
+     }
+     Properties versionProps = new Properties()
+
+     versionFile.withInputStream {
+         stream -> versionProps.load(stream)
+     }
+
+     new ProjectVersion(versionProps.major.toInteger(),
+     versionProps.minor.toInteger(), versionProps.release.toBoolean())
+ }
+
+ task makeReleaseVersion(group: 'versioning', description: 'Make project a release version.') {
+     inputs.property('release', version.release)
+     outputs.file versionFile
+
+    doLast {
+         version.release = true
+        ant.propertyfile(file: versionFile) {
+            entry(key: "release", type: "string", operation: "=", value: 'true')
+        }
+    }
+ }
